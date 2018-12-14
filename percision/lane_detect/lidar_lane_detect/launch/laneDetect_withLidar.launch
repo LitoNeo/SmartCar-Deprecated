@@ -1,0 +1,22 @@
+<launch>
+    <arg name="init_laneLeftBoundary" default="5.0"/>
+    <arg name="init_laneRightBoundary" default="5.0"/>
+    <arg name="init_minClipHeight" default="-5.0"/>
+    <arg name="init_maxClipHeight" default="0.3"/>
+    
+    <!--arg:visibleLength is the length that the car need to detect (just in front of the car-->
+    <arg name="init_visibleLength" default="10.0"/>
+    
+    <!--add args for : cluster(e.g. Eu) feature-extract etc.-->
+
+    <param name="laneLeftBoundary" value="${init_laneLeftBoundary}"/>
+    <param name="laneRightBoundary" value="${init_laneRightBoundary}"/>
+    <param name="minClipHeight" value="${init_minClipHeight}"/>
+    <param name="maxClipHeight" value="${init_maxClipHeight}"/>
+
+    <param name="visibleLength" value="${init_visibleLength}"/>
+
+    <node pkg="lidar_lane_detect" type="LidarLaneDetect_node" name="laneDetection_withLidar_node" output="screen">
+        <remap from="lidar" to="/velodyne_points" />
+    </node>
+</launch>

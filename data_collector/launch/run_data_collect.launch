@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="data_collector" type="collector.py" name="data_collect_node" output="screen">
+        <param name="~file_path" type="str" value="/sin/Documents/data"/>
+        <remap from="/lidar" to="/velodyne_points"/>
+    </node>
+</launch>

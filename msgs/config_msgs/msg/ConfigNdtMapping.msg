@@ -1,0 +1,10 @@
+Header header
+string name
+float32 resolution=0.1
+float32 step_size=100
+float32 trans_epsilon=0.01
+int32 max_iterations=100
+float32 leaf_size=2.0
+float32 min_scan_range=5.0
+float32 max_scan_range=200.0
+float32 min_add_scan_shift=1.0
