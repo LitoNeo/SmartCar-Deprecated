@@ -77,7 +77,7 @@ namespace FAST_NDT{
 
 	static bool _incremental_voxel_update = false;  // ??????????
 
-	static ros::Time callback_start, callback_end, t1_start, t1_end, t2_start, t2_end, t3_start, t3_end, t4_start, t4_end,
+	static ros::Time callback_start, callback_end, t1_start, t1_end, t2_start, t2_end, t3_start, t3_end, ndt_start, ndt_end,
 			t5_start, t5_end;
 	static ros::Duration d_callback, d1, d2, d3, d4, d5;
 

@@ -76,16 +76,16 @@ namespace FAST_NDT{
 
 		switch (method_type_temp) {
 			case 0:
-				std::cout << "Use PCL NDT" << std::endl;
+				std::cout << ">> Use PCL NDT <<" << std::endl;
 				break;
 			case 1:
-				std::cout << "Use CPU NDT" << std::endl;
+				std::cout << ">> Use CPU NDT <<" << std::endl;
 				break;
 			case 2:
-				std::cout << "Use GPU NDT" << std::endl;
+				std::cout << ">> Use GPU NDT <<" << std::endl;
 				break;
 			case 3:
-				std::cout << "Use OMP NDT" << std::endl;
+				std::cout << ">> Use OMP NDT <<" << std::endl;
 				break;
 			default:
 				ROS_ERROR("Invalid method type of NDT");
@@ -530,11 +530,11 @@ namespace FAST_NDT{
 		t3_end = ros::Time::now();
 		d3 = t3_end - t3_start;
 
-		t4_start = ros::Time::now();
+		ndt_start = ros::Time::now();
 
 		// 用以保存ndt转换后的点云,align参数
 		pcl::PointCloud<pcl::PointXYZI>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-
+		
 		if (_method_type == MethodType::use_pcl)
 		{
 			pcl_ndt.align(*output_cloud, init_guess);  // pcl::aligin 需传入转换后的点云(容器),估计变换
@@ -561,13 +561,14 @@ namespace FAST_NDT{
 			final_num_iteration = gpu_ndt.getFinalNumIteration();
 		}
 		else if (_method_type == MethodType::use_omp)
-  	{
-    omp_ndt.align(*output_cloud, init_guess);   // omp_ndt.align用法同pcl::ndt
-    fitness_score = omp_ndt.getFitnessScore();
-    t_localizer = omp_ndt.getFinalTransformation();
-    has_converged = omp_ndt.hasConverged();
-    final_num_iteration = omp_ndt.getFinalNumIteration();
- 	 }
+  		{
+			omp_ndt.align(*output_cloud, init_guess);   // omp_ndt.align用法同pcl::ndt
+			fitness_score = omp_ndt.getFitnessScore();
+			t_localizer = omp_ndt.getFinalTransformation();
+			has_converged = omp_ndt.hasConverged();
+			final_num_iteration = omp_ndt.getFinalNumIteration();
+ 	 	}
+		ndt_end = ros::Time::now();
 
 		// bask_link 需要排除掉全局起始点偏移造成的影响
 		// !!!!!!!!!!也即t_localizer对应的是当前局部地图;t_base_link对应的是全局的global地图!!!!!!!!!!!
@@ -745,40 +746,41 @@ namespace FAST_NDT{
 		// end5
 
 		// Write log // 每次points_callback都会写入log文件  // 正规@!
-		if (!ofs)
-		{
-			std::cerr << "Could not open " << filename << "." << std::endl;
-			exit(1);
-		}
+		// if (!ofs)
+		// {
+		// 	std::cerr << "Could not open " << filename << "." << std::endl;
+		// 	exit(1);
+		// }
 
-		ofs << input->header.seq << ","
-				<< input->header.stamp << ","
-				<< input->header.frame_id << ","
-				<< scan_ptr->size() << ","
-				<< filtered_scan_ptr->size() << ","
-				<< std::fixed << std::setprecision(5) << current_pose.x << ","
-				<< std::fixed << std::setprecision(5) << current_pose.y << ","
-				<< std::fixed << std::setprecision(5) << current_pose.z << ","
-				<< current_pose.roll << ","
-				<< current_pose.pitch << ","
-				<< current_pose.yaw << ","
-				<< final_num_iteration << ","
-				<< fitness_score << ","
-				<< ndt_res << ","
-				<< step_size << ","
-				<< trans_eps << ","
-				<< max_iter << ","
-				<< voxel_leaf_size << ","
-				<< min_scan_range << ","
-				<< max_scan_range << ","
-				<< min_add_scan_shift << std::endl;
+		// ofs << input->header.seq << ","
+		// 		<< input->header.stamp << ","
+		// 		<< input->header.frame_id << ","
+		// 		<< scan_ptr->size() << ","
+		// 		<< filtered_scan_ptr->size() << ","
+		// 		<< std::fixed << std::setprecision(5) << current_pose.x << ","
+		// 		<< std::fixed << std::setprecision(5) << current_pose.y << ","
+		// 		<< std::fixed << std::setprecision(5) << current_pose.z << ","
+		// 		<< current_pose.roll << ","
+		// 		<< current_pose.pitch << ","
+		// 		<< current_pose.yaw << ","
+		// 		<< final_num_iteration << ","
+		// 		<< fitness_score << ","
+		// 		<< ndt_res << ","
+		// 		<< step_size << ","
+		// 		<< trans_eps << ","
+		// 		<< max_iter << ","
+		// 		<< voxel_leaf_size << ","
+		// 		<< min_scan_range << ","
+		// 		<< max_scan_range << ","
+		// 		<< min_add_scan_shift << std::endl;
 
 		std::cout << "-----------------------------------------------------------------" << std::endl;
 		std::cout << "Sequence number: " << input->header.seq << std::endl;
 		std::cout << "Number of scan points: " << scan_ptr->size() << " points." << std::endl;
 		std::cout << "Number of filtered scan points: " << filtered_scan_ptr->size() << " points." << std::endl;
 		std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points." << std::endl;
-		std::cout << "map: " << map.points.size() << " points." << std::endl;
+		std::cout << "global_map: " << map.points.size() << " points." << std::endl;
+		std::cout << "NDT Used Time: " << (ndt_end - ndt_start) << "s" << std::endl;
 		std::cout << "NDT has converged: " << has_converged << std::endl;
 		std::cout << "Fitness score: " << fitness_score << std::endl;
 		std::cout << "Number of iteration: " << final_num_iteration << std::endl;
@@ -796,43 +798,43 @@ namespace FAST_NDT{
 		param_initial(nh,private_nh);
 
 // Set log file name. // 日志文件记录?? ofs
-		char buffer[80];
-		std::time_t now = std::time(NULL);
-		std::tm* pnow = std::localtime(&now);
-		std::strftime(buffer, 80, "%Y%m%d_%H%M%S", pnow);
-		filename = "ndt_mapping_" + std::string(buffer) + ".csv";
-		ofs.open(filename.c_str(), std::ios::app);  // ofs在上面定义upup
+		// char buffer[80];
+		// std::time_t now = std::time(NULL);
+		// std::tm* pnow = std::localtime(&now);
+		// std::strftime(buffer, 80, "%Y%m%d_%H%M%S", pnow);
+		// filename = "ndt_mapping_" + std::string(buffer) + ".csv";
+		// ofs.open(filename.c_str(), std::ios::app);  // ofs在上面定义upup
 
-		// write header for log file
-		// start initial_ofs
-		if (!ofs)
-		{
-			std::cerr << "Could not open " << filename << "." << std::endl;
-			exit(1);
-		}
+		// // write header for log file
+		// // start initial_ofs
+		// if (!ofs)
+		// {
+		// 	std::cerr << "Could not open " << filename << "." << std::endl;
+		// 	exit(1);
+		// }
 
-		ofs << "input->header.seq" << ","
-				<< "input->header.stamp" << ","
-				<< "input->header.frame_id" << ","
-				<< "scan_ptr->size()" << ","
-				<< "filtered_scan_ptr->size()" << ","
-				<< "current_pose.x" << ","
-				<< "current_pose.y" << ","
-				<< "current_pose.z" << ","
-				<< "current_pose.roll" << ","
-				<< "current_pose.pitch" << ","
-				<< "current_pose.yaw" << ","
-				<< "final_num_iteration" << ","
-				<< "fitness_score" << ","
-				<< "ndt_res" << ","
-				<< "step_size" << ","
-				<< "trans_eps" << ","
-				<< "max_iter" << ","
-				<< "voxel_leaf_size" << ","
-				<< "min_scan_range" << ","
-				<< "max_scan_range" << ","
-				<< "min_add_scan_shift" << std::endl;
-		// end initial_ofs
+		// ofs << "input->header.seq" << ","
+		// 		<< "input->header.stamp" << ","
+		// 		<< "input->header.frame_id" << ","
+		// 		<< "scan_ptr->size()" << ","
+		// 		<< "filtered_scan_ptr->size()" << ","
+		// 		<< "current_pose.x" << ","
+		// 		<< "current_pose.y" << ","
+		// 		<< "current_pose.z" << ","
+		// 		<< "current_pose.roll" << ","
+		// 		<< "current_pose.pitch" << ","
+		// 		<< "current_pose.yaw" << ","
+		// 		<< "final_num_iteration" << ","
+		// 		<< "fitness_score" << ","
+		// 		<< "ndt_res" << ","
+		// 		<< "step_size" << ","
+		// 		<< "trans_eps" << ","
+		// 		<< "max_iter" << ","
+		// 		<< "voxel_leaf_size" << ","
+		// 		<< "min_scan_range" << ","
+		// 		<< "max_scan_range" << ","
+		// 		<< "min_add_scan_shift" << std::endl;
+		// // end initial_ofs
 
 		// 根据初始设定的_tf,_roll等,初始化tl_btol rot_x_btol等
 		Eigen::Translation3f tl_btol(_tf_x, _tf_y, _tf_z);                 // tl: translation  // tl_btol是初始设定的
