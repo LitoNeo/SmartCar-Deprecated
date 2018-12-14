@@ -419,7 +419,7 @@ namespace FAST_NDT{
 		}
 
 		pcl::PointCloud<pcl::PointXYZI>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZI>(scan));  // scan保存到scan_ptr中
-
+		ndt_start = ros::Time::now();
 		if(initial_scan_loaded == 0){
 			pcl::transformPointCloud(*scan_ptr,*transformed_scan_ptr,tf_btol);  // tf_btol为初始变换矩阵
 			map += *transformed_scan_ptr;
@@ -465,11 +465,12 @@ namespace FAST_NDT{
 			omp_ndt.setInputSource(filtered_scan_ptr);
 		}
 		else{
-			ROS_ERROR("Please Define _method_type to conduce NDT");
+			ROS_ERROR("Please Define _method_type to conduct NDT");
 			exit(1);
 		}
 
 		static bool is_first_map = true;  // static  // 第一帧点云直接作为 target
+		ros::Time time_to_ndt_setTarget_start = ros::Time::now();  // start record time to set target
 		if (is_first_map){
 			ROS_INFO("add first map");
 			if(_method_type == MethodType::use_pcl){
@@ -486,6 +487,8 @@ namespace FAST_NDT{
 			}
 			is_first_map = false;
 		}
+		ros::Time time_to_ndt_setTarget_end = ros::Time::now();
+		ros::Duration time_to_ndt_setTarget = time_to_ndt_setTarget_start - time_to_ndt_setTarget_end;  // ent record time to set target
 
 		guess_pose.x = previous_pose.x + diff_x;  // 初始时diff_x等都为0
 		guess_pose.y = previous_pose.y + diff_y;
@@ -529,8 +532,6 @@ namespace FAST_NDT{
 
 		t3_end = ros::Time::now();
 		d3 = t3_end - t3_start;
-
-		ndt_start = ros::Time::now();
 
 		// 用以保存ndt转换后的点云,align参数
 		pcl::PointCloud<pcl::PointXYZI>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -781,6 +782,7 @@ namespace FAST_NDT{
 		std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points." << std::endl;
 		std::cout << "global_map: " << map.points.size() << " points." << std::endl;
 		std::cout << "NDT Used Time: " << (ndt_end - ndt_start) << "s" << std::endl;
+		std::cout << "time to set ndt target" << time_to_ndt_setTarget << "s" << std::endl;
 		std::cout << "NDT has converged: " << has_converged << std::endl;
 		std::cout << "Fitness score: " << fitness_score << std::endl;
 		std::cout << "Number of iteration: " << final_num_iteration << std::endl;
