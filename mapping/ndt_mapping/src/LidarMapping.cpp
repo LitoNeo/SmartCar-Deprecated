@@ -394,6 +394,7 @@ namespace FAST_NDT{
 	}
 
 	void LidarMapping::points_callback(const sensor_msgs::PointCloud2::ConstPtr &input) {
+		ros::Time test_time_1 = ros::Time::now();  // TODO: 
 		double r;
 		pcl::PointXYZI p;
 		pcl::PointCloud<pcl::PointXYZI> tmp, scan;
@@ -419,7 +420,10 @@ namespace FAST_NDT{
 		}
 
 		pcl::PointCloud<pcl::PointXYZI>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZI>(scan));  // scan保存到scan_ptr中
-		ndt_start = ros::Time::now();
+
+		ros::Time test_time_2 = ros::Time::now();  // TODO:
+
+		ndt_start = ros::Time::now();  // ndt start time recorder
 		if(initial_scan_loaded == 0){
 			pcl::transformPointCloud(*scan_ptr,*transformed_scan_ptr,tf_btol);  // tf_btol为初始变换矩阵
 			map += *transformed_scan_ptr;
@@ -468,9 +472,9 @@ namespace FAST_NDT{
 			ROS_ERROR("Please Define _method_type to conduct NDT");
 			exit(1);
 		}
+		ros::Time test_time_3 = ros::Time::now();  // TODO:
 
 		static bool is_first_map = true;  // static  // 第一帧点云直接作为 target
-		ros::Time time_to_ndt_setTarget_start = ros::Time::now();  // start record time to set target
 		if (is_first_map){
 			ROS_INFO("add first map");
 			if(_method_type == MethodType::use_pcl){
@@ -487,8 +491,6 @@ namespace FAST_NDT{
 			}
 			is_first_map = false;
 		}
-		ros::Time time_to_ndt_setTarget_end = ros::Time::now();
-		ros::Duration time_to_ndt_setTarget = time_to_ndt_setTarget_start - time_to_ndt_setTarget_end;  // ent record time to set target
 
 		guess_pose.x = previous_pose.x + diff_x;  // 初始时diff_x等都为0
 		guess_pose.y = previous_pose.y + diff_y;
@@ -570,6 +572,7 @@ namespace FAST_NDT{
 			final_num_iteration = omp_ndt.getFinalNumIteration();
  	 	}
 		ndt_end = ros::Time::now();
+		ros::Time test_time_4 = ros::Time::now();  // TODO:
 
 		// bask_link 需要排除掉全局起始点偏移造成的影响
 		// !!!!!!!!!!也即t_localizer对应的是当前局部地图;t_base_link对应的是全局的global地图!!!!!!!!!!!
@@ -699,9 +702,15 @@ namespace FAST_NDT{
 		// Calculate the shift between added_pos and current_pos // 以确定是否更新全局地图
 		// added_pose将一直定位于localMap的原点
 		// ################################################################################
+		ros::Time test_time_5 = ros::Time::now();  // TODO:
 		double shift = sqrt(pow(current_pose.x - added_pose.x, 2.0) + pow(current_pose.y - added_pose.y, 2.0));
 		if (shift >= min_add_scan_shift)
 		{
+			pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_tomap;
+			voxel_grid_filter_tomap.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
+			voxel_grid_filter_tomap.setInputCloud(transformed_scan_ptr);
+			voxel_grid_filter_tomap.filter(*transformed_scan_ptr);
+			
 			map += *transformed_scan_ptr;
 			added_pose.x = current_pose.x;
 			added_pose.y = current_pose.y;
@@ -744,6 +753,7 @@ namespace FAST_NDT{
 		current_pose_msg.pose.orientation.w = q.w();
 
 		current_pose_pub.publish(current_pose_msg);  // TODO:每一帧都发布current_pose
+		ros::Time test_time_6 = ros::Time::now();  // TODO:
 		// end5
 
 		// Write log // 每次points_callback都会写入log文件  // 正规@!
@@ -782,7 +792,6 @@ namespace FAST_NDT{
 		std::cout << "transformed_scan_ptr: " << transformed_scan_ptr->points.size() << " points." << std::endl;
 		std::cout << "global_map: " << map.points.size() << " points." << std::endl;
 		std::cout << "NDT Used Time: " << (ndt_end - ndt_start) << "s" << std::endl;
-		std::cout << "time to set ndt target" << time_to_ndt_setTarget << "s" << std::endl;
 		std::cout << "NDT has converged: " << has_converged << std::endl;
 		std::cout << "Fitness score: " << fitness_score << std::endl;
 		std::cout << "Number of iteration: " << final_num_iteration << std::endl;
@@ -792,6 +801,12 @@ namespace FAST_NDT{
 		std::cout << "Transformation Matrix:" << std::endl;
 		std::cout << t_localizer << std::endl;
 		std::cout << "shift: " << shift << std::endl;
+		std::cout << "1-2" << test_time_2 - test_time_1 << "s" << std::endl;
+		std::cout << "2-3" << test_time_3 - test_time_2 << "s" << std::endl;
+		std::cout << "3-4" << test_time_4 - test_time_3 << "s" << std::endl;
+		std::cout << "4-5" << test_time_5 - test_time_4 << "s" << std::endl;
+		std::cout << "5-6" << test_time_6 - test_time_5 << "s" << std::endl;
+
 		std::cout << "-----------------------------------------------------------------" << std::endl;
 
 	}
