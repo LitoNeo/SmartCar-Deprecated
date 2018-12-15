@@ -18,9 +18,9 @@ find_package(Eigen3 REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	config_msgs
-    nav_msgs
-    pcl_conversions
-    sensor_msgs
+  nav_msgs
+  pcl_conversions
+  sensor_msgs
 	tf
 	std_msgs
 	geometry_msgs
