@@ -191,14 +191,14 @@ target_link_libraries(ndt_localization_node
   ndt_localization
 )
 
-add_executable(ndt_test
-  src/ndt_test.cpp
-)
+# add_executable(ndt_test
+#   src/ndt_test.cpp
+# )
 
-target_link_libraries(ndt_test
-  ${catkin_LIBRARIES}
-  ${PCL_LIBRARIES}
-)
+# target_link_libraries(ndt_test
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+# )
 
 add_executable(tf_test
   src/tf_test.cpp

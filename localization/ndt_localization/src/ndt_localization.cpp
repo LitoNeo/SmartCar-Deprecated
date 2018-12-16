@@ -36,8 +36,10 @@ bool NDTLocalization::init()
   pnh_.param<int>("method_type", param_method_type_, 0);
   pnh_.param<bool>("debug", param_debug_, false);
 
-  sub_initial_pose_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, boost::bind(&NDTLocalization::initialPoseCB, this, _1));
-  sub_map_ = nh_.subscribe<sensor_msgs::PointCloud2>("/map/point_cloud", 1, boost::bind(&NDTLocalization::mapCB, this, _1));
+  // sub_initial_pose_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/initialpose", 1, boost::bind(&NDTLocalization::initialPoseCB, this, _1));
+  initialPoseCB();
+  // sub_map_ = nh_.subscribe<sensor_msgs::PointCloud2>("/map/point_cloud", 1, boost::bind(&NDTLocalization::mapCB, this, _1));
+  sub_map_ = nh_.subscribe<sensor_msgs::PointCloud2>("/static_map", 1, boost::bind(&NDTLocalization::mapCB, this, _1));
   sub_odom_ = nh_.subscribe<nav_msgs::Odometry>("/odom/imu", 500, boost::bind(&NDTLocalization::odomCB, this, _1));
   sub_point_cloud_ = nh_.subscribe<sensor_msgs::PointCloud2>("/lslidar_point_cloud", 20, boost::bind(&NDTLocalization::pointCloudCB, this, _1));
   pub_current_pose_ = nh_.advertise<geometry_msgs::PoseStamped>("/ndt/current_pose", 100);
@@ -96,6 +98,22 @@ void NDTLocalization::initialPoseCB(const geometry_msgs::PoseWithCovarianceStamp
     return;
   }
   geometryPose2Pose(msg->pose.pose, initial_pose_);
+
+  pre_pose_ = pre_pose_odom_ = current_pose_odom_ = current_pose_ = initial_pose_;
+  pose_init_ = true;
+
+  offset_odom_.reset();
+  offset_imu_.reset();
+  if (param_debug_)
+  {
+    rawodom_init_ = false;
+  }
+
+  ROS_INFO("Current pose initialized.");
+}
+
+void NDTLocalization::initialPoseCB(){
+  initial_pose_.reset();
 
   pre_pose_ = pre_pose_odom_ = current_pose_odom_ = current_pose_ = initial_pose_;
   pose_init_ = true;

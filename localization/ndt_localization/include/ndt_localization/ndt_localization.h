@@ -152,6 +152,7 @@ private:
    * @param msg 
    */
   void initialPoseCB(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
+  void initialPoseCB();
 
   /**
    * @brief Get measured data points, estimate current pose using 3D-NDT-matching.

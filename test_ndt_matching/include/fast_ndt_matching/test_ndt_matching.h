@@ -214,6 +214,8 @@ namespace FAST_NDT{
 			initial_scan_loaded = 0;  // 用以确定是否为第一帧点云(第一帧点云不做匹配,直接添加到地图中去)
 		}// end:Construct LidarMapping(){};
 
+		void loadMap(ros::NodeHandle &nh,ros::NodeHandle &private_handle);
+
 		void param_callback(const config_msgs::ConfigNdtMapping msg);
 		void param_initial(ros::NodeHandle &nh,ros::NodeHandle &private_handle);
 //		void output_callback(const autoware_config_msgs::ConfigNdtMappingOutput::ConstPtr& input)  // 按要求发布地图

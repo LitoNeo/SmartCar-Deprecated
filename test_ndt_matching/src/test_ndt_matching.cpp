@@ -2,9 +2,26 @@
 // Created by yunle on 18-12-4.
 //
 
-#include <fast_ndt_mapping/LidarMapping.h>
+#include <fast_ndt_matching/test_ndt_matching.h>
+#include <pcl/io/io.h>
 
 namespace FAST_NDT{
+	void LidarMapping::loadMap(ros::NodeHandle &nh,ros::NodeHandle &private_handle){
+		std::string param_pcd_file_path;
+		std::string param_map_frame;
+		private_handle.param<std::string>("pcd_file_path",param_pcd_file_path,"");
+    	private_handle.param<std::string>("map_frame",param_map_frame,"/map");
+		std::cout << "map file : " << param_pcd_file_path <<std::endl; 
+		// sensor_msgs::PointCloud2 msg_map;
+
+		if (param_pcd_file_path == "" || pcl::io::loadPCDFile(param_pcd_file_path,map) == -1){
+        	ROS_ERROR("Failed to load map pcd file: %s",param_pcd_file_path);
+	    }
+		// pcl::fromROSMsg()
+		map.header.frame_id = param_map_frame;
+		std::cout << "Success load " << map.size() << " points" << std::endl;
+	}
+
 	void LidarMapping::param_callback(config_msgs::ConfigNdtMapping msg) {
 		ndt_res = msg.resolution;
 		step_size = msg.step_size;
@@ -91,6 +108,20 @@ namespace FAST_NDT{
 				ROS_ERROR("Invalid method type of NDT");
 				exit(1);
 		}
+		pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr(new pcl::PointCloud<pcl::PointXYZI>(map));
+		if(_method_type == MethodType::use_pcl){
+			pcl_ndt.setInputTarget(map_ptr);
+		}
+		else if(_method_type == MethodType::use_cpu){
+			cpu_ndt.setInputTarget(map_ptr);
+		}
+		else if(_method_type == MethodType::use_gpu){
+			gpu_ndt.setInputTarget(map_ptr);
+		}
+		else if(_method_type == MethodType::use_omp){
+			omp_ndt.setInputTarget(map_ptr);
+		}
+		std::cout << "Initial NDT method success " << std::endl;
 		std::cout << std::endl;
 
 		privateHandle.param<double>("init_x",_tf_x,0);
@@ -422,11 +453,11 @@ namespace FAST_NDT{
 		pcl::PointCloud<pcl::PointXYZI>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZI>(scan));  // scan保存到scan_ptr中
 
 		ndt_start = ros::Time::now();  // ndt start time recorder
-		if(initial_scan_loaded == 0){
-			pcl::transformPointCloud(*scan_ptr,*transformed_scan_ptr,tf_btol);  // tf_btol为初始变换矩阵
-			map += *transformed_scan_ptr;
-			initial_scan_loaded = 1;
-		}
+		// if(initial_scan_loaded == 0){
+		// 	pcl::transformPointCloud(*scan_ptr,*transformed_scan_ptr,tf_btol);  // tf_btol为初始变换矩阵
+		// 	map += *transformed_scan_ptr;
+		// 	initial_scan_loaded = 1;
+		// }
 
 		// Apply voxelgrid filter  // 对scan_ptr进行降采样
 		pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter;
@@ -434,11 +465,11 @@ namespace FAST_NDT{
 		voxel_grid_filter.setInputCloud(scan_ptr);
 		voxel_grid_filter.filter(*filtered_scan_ptr);
 
-		ros::Time test_time_2 = ros::Time::now();  // TODO:
+		ros::Time test_time_2 = ros::Time::now();  // TODO:		
 
 		// map_ptr是map的一个指针
 		// TODO:即map_ptr只是指向map,而并不是将map进行了拷贝
-		pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr(new pcl::PointCloud<pcl::PointXYZI>(map));  // 重要作用,用以保存降采样后的全局地图
+		// pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr(new pcl::PointCloud<pcl::PointXYZI>(map));  // 重要作用,用以保存降采样后的全局地图
 
 		if(_method_type == MethodType::use_pcl){
 			pcl_ndt.setTransformationEpsilon(trans_eps);
@@ -474,23 +505,23 @@ namespace FAST_NDT{
 		}
 		ros::Time test_time_3 = ros::Time::now();  // TODO:
 
-		static bool is_first_map = true;  // static  // 第一帧点云直接作为 target
-		if (is_first_map){
-			ROS_INFO("add first map");
-			if(_method_type == MethodType::use_pcl){
-				pcl_ndt.setInputTarget(map_ptr);
-			}
-			else if(_method_type == MethodType::use_cpu){
-				cpu_ndt.setInputTarget(map_ptr);
-			}
-			else if(_method_type == MethodType::use_gpu){
-				gpu_ndt.setInputTarget(map_ptr);
-			}
-			else if(_method_type == MethodType::use_omp){
-				omp_ndt.setInputTarget(map_ptr);
-			}
-			is_first_map = false;
-		}
+		// static bool is_first_map = true;  // static  // 第一帧点云直接作为 target
+		// if (is_first_map){
+		// 	ROS_INFO("add first map");
+			// if(_method_type == MethodType::use_pcl){
+			// 	pcl_ndt.setInputTarget(map_ptr);
+			// }
+			// else if(_method_type == MethodType::use_cpu){
+			// 	cpu_ndt.setInputTarget(map_ptr);
+			// }
+			// else if(_method_type == MethodType::use_gpu){
+			// 	gpu_ndt.setInputTarget(map_ptr);
+			// }
+			// else if(_method_type == MethodType::use_omp){
+			// 	omp_ndt.setInputTarget(map_ptr);
+			// }
+		// 	is_first_map = false;
+		// }
 
 		guess_pose.x = previous_pose.x + diff_x;  // 初始时diff_x等都为0
 		guess_pose.y = previous_pose.y + diff_y;
@@ -580,7 +611,7 @@ namespace FAST_NDT{
 		t_base_link = t_localizer * tf_ltob;  // t_localizer为每个配准库所计算出的final_transformation !!!!!
 
 		// 配准变换 --注意:
-		pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, t_localizer);
+		// pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, t_localizer);
 
 		tf::Matrix3x3 mat_l, mat_b;  // 用以根据齐次坐标下的旋转变换,来求rpy转换角度
 		mat_l.setValue(static_cast<double>(t_localizer(0, 0)), static_cast<double>(t_localizer(0, 1)),
@@ -704,42 +735,42 @@ namespace FAST_NDT{
 		// ################################################################################
 		ros::Time test_time_5 = ros::Time::now();  // TODO:
 		double shift = sqrt(pow(current_pose.x - added_pose.x, 2.0) + pow(current_pose.y - added_pose.y, 2.0));
-		if (shift >= min_add_scan_shift)
-		{
-			pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_tomap;
-			voxel_grid_filter_tomap.setLeafSize(voxel_leaf_size*2, voxel_leaf_size*2, voxel_leaf_size*2);
-			voxel_grid_filter_tomap.setInputCloud(transformed_scan_ptr);
-			voxel_grid_filter_tomap.filter(*transformed_scan_ptr);
+		// if (shift >= min_add_scan_shift)
+		// {
+		// 	pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter_tomap;
+		// 	voxel_grid_filter_tomap.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
+		// 	voxel_grid_filter_tomap.setInputCloud(transformed_scan_ptr);
+		// 	voxel_grid_filter_tomap.filter(*transformed_scan_ptr);
 			
-			map += *transformed_scan_ptr;
-			added_pose.x = current_pose.x;
-			added_pose.y = current_pose.y;
-			added_pose.z = current_pose.z;
-			added_pose.roll = current_pose.roll;
-			added_pose.pitch = current_pose.pitch;
-			added_pose.yaw = current_pose.yaw;
+		// 	map += *transformed_scan_ptr;
+		// 	added_pose.x = current_pose.x;
+		// 	added_pose.y = current_pose.y;
+		// 	added_pose.z = current_pose.z;
+		// 	added_pose.roll = current_pose.roll;
+		// 	added_pose.pitch = current_pose.pitch;
+		// 	added_pose.yaw = current_pose.yaw;
 
-			if (_method_type == MethodType::use_pcl)
-				pcl_ndt.setInputTarget(map_ptr);  // 注意:此时加入的target:map_ptr并不包括刚加入点云的transformed_scan_ptr
-			else if (_method_type == MethodType::use_cpu)  // 只是说map更新了,因此target也要更新,不要落后太多
-			{
-				if (_incremental_voxel_update)  // TODO:
-					cpu_ndt.updateVoxelGrid(transformed_scan_ptr);
-				else
-					cpu_ndt.setInputTarget(map_ptr);
-			}
-			else if (_method_type == MethodType::use_gpu)
-				gpu_ndt.setInputTarget(map_ptr);
-			else if (_method_type == MethodType::use_omp)
-      	omp_ndt.setInputTarget(map_ptr);
-		}// end if(shift)
+		// 	if (_method_type == MethodType::use_pcl)
+		// 		pcl_ndt.setInputTarget(map_ptr);  // 注意:此时加入的target:map_ptr并不包括刚加入点云的transformed_scan_ptr
+		// 	else if (_method_type == MethodType::use_cpu)  // 只是说map更新了,因此target也要更新,不要落后太多
+		// 	{
+		// 		if (_incremental_voxel_update)  // TODO:
+		// 			cpu_ndt.updateVoxelGrid(transformed_scan_ptr);
+		// 		else
+		// 			cpu_ndt.setInputTarget(map_ptr);
+		// 	}
+		// 	else if (_method_type == MethodType::use_gpu)
+		// 		gpu_ndt.setInputTarget(map_ptr);
+		// 	else if (_method_type == MethodType::use_omp)
+      	// omp_ndt.setInputTarget(map_ptr);
+		// }// end if(shift)
 		// ################################################################################
 
 // 整理sensor_msg,发布更新后的(且降采样后的)全局地图,以及位置
 		// start5
-		sensor_msgs::PointCloud2::Ptr map_msg_ptr(new sensor_msgs::PointCloud2);
-		pcl::toROSMsg(*map_ptr, *map_msg_ptr);
-		ndt_map_pub.publish(*map_msg_ptr);  // TODO:每一帧都发布map(全局map)
+		// sensor_msgs::PointCloud2::Ptr map_msg_ptr(new sensor_msgs::PointCloud2);
+		// pcl::toROSMsg(*map_ptr, *map_msg_ptr);
+		// ndt_map_pub.publish(*map_msg_ptr);  // TODO:每一帧都发布map(全局map)
 
 		q.setRPY(current_pose.roll, current_pose.pitch, current_pose.yaw);
 		current_pose_msg.header.frame_id = "map";
@@ -752,7 +783,7 @@ namespace FAST_NDT{
 		current_pose_msg.pose.orientation.z = q.z();
 		current_pose_msg.pose.orientation.w = q.w();
 
-		current_pose_pub.publish(current_pose_msg);  // TODO:每一帧都发布current_pose
+		current_pose_pub.publish(current_pose_msg);  // TODO:每一帧都发布current_pose  geometry_msgs::PoseStamped 
 		ros::Time test_time_6 = ros::Time::now();  // TODO:
 		// end5
 
@@ -812,6 +843,7 @@ namespace FAST_NDT{
 	}
 
 	void LidarMapping::run(ros::NodeHandle &nh, ros::NodeHandle &private_nh) {
+		loadMap(nh,private_nh);
 		param_initial(nh,private_nh);
 
 // Set log file name. // 日志文件记录?? ofs
@@ -870,9 +902,9 @@ namespace FAST_NDT{
 
 //		ros::Subscriber param_sub = nh.subscribe("config/ndt_mapping", 10, param_callback);
 //		ros::Subscriber output_sub = nh.subscribe("config/ndt_mapping_output", 10, output_callback);
-		points_sub = nh.subscribe(_lidar_topic, 1000, &LidarMapping::points_callback,this);
-		odom_sub = nh.subscribe(_odom_topic, 1000, &LidarMapping::odom_callback,this);
-		imu_sub = nh.subscribe(_imu_topic, 1000, &LidarMapping::imu_callback,this);
+		points_sub = nh.subscribe(_lidar_topic, 100, &LidarMapping::points_callback,this);
+		odom_sub = nh.subscribe(_odom_topic, 100, &LidarMapping::odom_callback,this);
+		imu_sub = nh.subscribe(_imu_topic, 100, &LidarMapping::imu_callback,this);
 	}
 
 }
