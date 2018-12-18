@@ -637,13 +637,27 @@ namespace FAST_NDT{
 		ndt_pose.y = t_base_link(1, 3);
 		ndt_pose.z = t_base_link(2, 3);
 		mat_b.getRPY(ndt_pose.roll, ndt_pose.pitch, ndt_pose.yaw, 1);
+
+		double predict_pose_error = sqrt((ndt_pose.x - guess_pose_for_ndt.x) * (ndt_pose.x - guess_pose_for_ndt.x) +
+                              (ndt_pose.y - guess_pose_for_ndt.y) * (ndt_pose.y - guess_pose_for_ndt.y) +
+                              (ndt_pose.z - guess_pose_for_ndt.z) * (ndt_pose.z - guess_pose_for_ndt.z));
 		// current_pose对应的当然是全局下的坐标!
-		current_pose.x = ndt_pose.x;
-		current_pose.y = ndt_pose.y;
-		current_pose.z = ndt_pose.z;
-		current_pose.roll = ndt_pose.roll;
-		current_pose.pitch = ndt_pose.pitch;
-		current_pose.yaw = ndt_pose.yaw;
+		if(predict_pose_error <= PREDICT_POSE_THRESHOLD){
+			current_pose.x = ndt_pose.x;
+			current_pose.y = ndt_pose.y;
+			current_pose.z = ndt_pose.z;
+			current_pose.roll = ndt_pose.roll;
+			current_pose.pitch = ndt_pose.pitch;
+			current_pose.yaw = ndt_pose.yaw;
+		}else{
+			std::cout << "Use guess pose for ndt" << std::endl;
+			current_pose.x = guess_pose_for_ndt.x;
+			current_pose.y = guess_pose_for_ndt.y;
+			current_pose.z = guess_pose_for_ndt.z;
+			current_pose.roll = guess_pose_for_ndt.roll;
+			current_pose.pitch = guess_pose_for_ndt.pitch;
+			current_pose.yaw = guess_pose_for_ndt.yaw;
+		}
 
 		// 以下:对current_pose做变换, ---------tf变换 ????????
 //		static tf::TransformBroadcaster br;  //

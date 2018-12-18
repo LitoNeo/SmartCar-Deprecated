@@ -85,6 +85,7 @@ namespace FAST_NDT{
 
 	class LidarMapping{
 	private:
+		double PREDICT_POSE_THRESHOLD = 0.5;
 		pose previous_pose,guess_pose,guess_pose_imu,guess_pose_odom,guess_pose_imu_odom;
 		pose current_pose,current_pose_imu,current_pose_odom,current_pose_imu_odom;
 		pose ndt_pose,localizer_pose;
